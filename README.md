@@ -58,6 +58,9 @@ python check.py day1_261011/01_카페주문통계/동현.py
 - **10/10 통과**해야 ✅, 2시간 안에 통과 못 하면 ⏰로 기록하기.
 
 ## 🌿 Git 규칙
+
+> 📮 **처음이라면 [`HOW_TO_SUBMIT.md`](./HOW_TO_SUBMIT.md) 를 먼저 읽어주세요!** (브랜치: donghyun / jaeyun / jaehee)
+
 - 각자 **본인 이름 브랜치**에서 작업 → `master`로 PR
 - PR은 **하루 1개** (그날 2문제 같이)
 - PR 제목: `[Day1] 동현 - 카페 주문 통계, 햇빛 드는 창문`
@@ -68,18 +71,18 @@ python check.py day1_261011/01_카페주문통계/동현.py
 # 처음 한 번
 git clone https://github.com/donghyun1000/im-study.git
 cd im-study
-git checkout -b 본인이름
+git checkout -b 본인브랜치
 
 # 매일 시작할 때
 git checkout master
 git pull origin master
-git checkout 본인이름
+git checkout 본인브랜치
 git merge master
 
 # 다 풀고 나서
 git add .
 git commit -m "[Day1-1] 카페 주문 통계 (45분)"
-git push origin 본인이름
+git push origin 본인브랜치
 # → GitHub에서 Compare & pull request
 ```
 
