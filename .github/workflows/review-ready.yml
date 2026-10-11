@@ -1,0 +1,38 @@
+# master에 merge될 때마다, 3명 모두 제출한 문제에 코드리뷰 이슈를 연다.
+# 14문제 × 3명 모두 끝나면 완주 이슈(구글폼 링크 포함)를 연다.
+name: 코드리뷰 이슈 자동 생성
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: review-ready
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 3명 모두 제출한 문제 확인 → 이슈 생성
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: master
+          PYTHONIOENCODING: utf-8
+        run: python .github/scripts/autoreview.py master
