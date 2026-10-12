@@ -12,7 +12,7 @@
 |---|---|---|
 | 동현 | @donghyun1000 | Python |
 | 재윤 | @JaeYunAn | Python |
-| 재희 | @jaehee454 | Python |
+| 재희 | @jaehee454-cloud | Python |
 
 ## 📅 진행 방식
 - **기간**: 26.10.11(일) ~ 26.10.17(토), 매일 2문제 → 총 14문제 (목록: [`ROADMAP.md`](./ROADMAP.md))

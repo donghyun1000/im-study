@@ -15,7 +15,7 @@ import sys
 MEMBERS = {
     '동현': 'donghyun1000',
     '재윤': 'JaeYunAn',
-    '재희': 'jaehee454',
+    '재희': 'jaehee454-cloud',
 }
 FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdOs4rhY8XAL8pQEo4J43eS3PHbIaqK7DlnXLDhU_8J85q7mQ/viewform'
 REPO = os.environ.get('GITHUB_REPOSITORY', 'donghyun1000/im-study')
