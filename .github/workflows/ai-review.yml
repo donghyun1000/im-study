@@ -1,0 +1,114 @@
+# "코드리뷰 이슈 자동 생성" 워크플로가 끝나면 실행된다.
+# 아직 AI 리뷰가 없는 코드리뷰 이슈마다 Claude가 3명 풀이를 읽고 리뷰 댓글을 단다.
+# (claude-code-action 은 push 이벤트를 지원하지 않아서 workflow_run 으로 분리)
+name: AI 코드리뷰
+
+on:
+  workflow_run:
+    workflows: ["코드리뷰 이슈 자동 생성"]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ai-review
+  cancel-in-progress: false
+
+jobs:
+  targets:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.targets.outputs.targets }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: AI 리뷰가 필요한 이슈 찾기
+        id: targets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONIOENCODING: utf-8
+        run: python .github/scripts/autoreview.py ai-targets
+
+  ai-review:
+    needs: targets
+    if: ${{ needs.targets.outputs.targets != '' && needs.targets.outputs.targets != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(needs.targets.outputs.targets) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Claude 코드리뷰 작성
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          claude_args: '--allowedTools "Read,Glob,Grep,Write" --max-turns 20'
+          prompt: |
+            너는 SSAFY IM(SW 역량테스트) 합격을 준비하는 3인 알고리즘 스터디의 코드리뷰어야.
+            팀원은 동현, 재윤, 재희이고 Python 초중급자야. 이번 주 목표는 for문/2차원 배열/델타 탐색 구현력이야.
+
+            리뷰할 문제 폴더: `${{ matrix.target.dir }}`
+            1. `${{ matrix.target.dir }}/README.md` 에서 문제를 읽어.
+            2. 같은 폴더의 `동현.*`, `재윤.*`, `재희.*` 풀이 파일을 모두 읽어. (input.txt, output.txt 는 읽지 않아도 돼)
+            3. 아래 형식의 한국어 마크다운 리뷰를 `ai_review.md` 파일(작업 폴더 최상위)에 Write 도구로 저장해.
+               다른 파일은 절대 만들거나 수정하지 마.
+
+            형식:
+            ## 🤖 AI 코드리뷰 — ${{ matrix.target.title }}
+
+            ### 👤 동현
+            - 👍 잘한 점: (1~2개)
+            - 🔧 개선점: (구체적인 줄/코드 조각을 인용해서 1~3개. 왜 개선이 필요한지 한 줄로)
+            - ⚠️ 엣지 케이스: (틀릴 수 있는 입력이 있으면. 없으면 "특별히 없음")
+
+            ### 👤 재윤
+            (같은 형식)
+
+            ### 👤 재희
+            (같은 형식)
+
+            ### 🔍 세 풀이 비교
+            - 접근 방법 차이를 표나 2~3줄로
+            - 가장 읽기 쉬운 풀이와 그 이유
+
+            ### 💡 IM 시험 팁
+            - 이 유형에서 시험장에서 실수하기 쉬운 점 1~2개
+
+            규칙:
+            - 모든 풀이는 이미 채점을 통과했을 수 있으니, "정답/오답" 판정보다 코드 품질·실수 방지·IM 습관 위주로 리뷰해.
+            - 정답 코드를 통째로 다시 써 주지 말고, 필요한 부분만 짧은 코드 조각으로 보여줘.
+            - 칭찬과 개선점의 균형을 맞추고, 말투는 친근한 존댓말로.
+            - 전체 길이는 화면 두 장을 넘기지 않게 간결하게.
+
+      - name: 이슈에 리뷰 댓글 달기
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ matrix.target.issue }}
+        run: |
+          if [ ! -s ai_review.md ]; then
+            echo "리뷰 파일이 생성되지 않았어요." && exit 1
+          fi
+          { echo '<!-- ai-review -->'; cat ai_review.md; } > comment.md
+          gh issue comment "$ISSUE" --body-file comment.md
