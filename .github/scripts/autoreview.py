@@ -149,9 +149,6 @@ def review_body(pdir, sols):
         rows.append(f'| {name} | [{os.path.basename(path)}]({blob_url(path)}) | {status} | {ok}/{total} '
                     f'| {sec_s} | {solve_time(path)} | {loc(path)} |')
 
-    pairs = list(MEMBERS)
-    assign = '\n'.join(f'- [ ] **{pairs[i]}** → {pairs[(i + 1) % 3]} 코드 리뷰' for i in range(3))
-
     return f'''{mentions}
 
 **{title}** 3명 모두 제출 완료! 🎉 서로의 풀이를 리뷰해 주세요.
@@ -163,21 +160,20 @@ def review_body(pdir, sols):
 |---|---|---|---|---|---|---|
 {chr(10).join(rows)}
 
-## 👀 리뷰 순서 (각자 1명 이상 코멘트)
-{assign}
-
 ## ✍️ 리뷰 포인트
 - 접근 방법이 어떻게 다른가? 더 간단한 방법은?
 - 인덱스 범위 / 경계 체크 실수 가능성은 없는가?
 - 변수 이름과 구조가 읽기 쉬운가?
 - 시간이 가장 오래 걸린 사람은 어디서 막혔는가?
 
-리뷰를 다 달았으면 위 체크박스를 체크하고, 3개 모두 체크되면 이 이슈를 Close 해 주세요.
+🤖 잠시 후 아래 댓글로 **AI 코드리뷰**가 자동으로 달려요. 확인하고 하고 싶은 말을 댓글로 남긴 뒤 이 이슈를 Close 해 주세요.
 '''
 
 
 # 예전에 잘못 적었던 GitHub 아이디 → 올바른 아이디 (이미 열린 이슈 본문도 고쳐준다)
 OLD_HANDLES = {'jaehee454': 'jaehee454-cloud'}
+OLD_FOOTER = '리뷰를 다 달았으면 위 체크박스를 체크하고, 3개 모두 체크되면 이 이슈를 Close 해 주세요.'
+NEW_FOOTER = '🤖 잠시 후 아래 댓글로 **AI 코드리뷰**가 자동으로 달려요. 확인하고 하고 싶은 말을 댓글로 남긴 뒤 이 이슈를 Close 해 주세요.'
 
 
 def fix_old_mentions():
@@ -190,8 +186,11 @@ def fix_old_mentions():
         new = body
         for old, cur in OLD_HANDLES.items():
             new = re.sub(r'@' + re.escape(old) + r'(?![\w-])', '@' + cur, new)
+        # 예전 '리뷰 순서' 섹션 제거 (AI 코드리뷰로 대체)
+        new = re.sub(r'## 👀 리뷰 순서[^\r\n]*\r?\n(?:- \[[ xX]\][^\r\n]*\r?\n)*(?:\r?\n)?', '', new)
+        new = new.replace(OLD_FOOTER, NEW_FOOTER)
         if new != body:
-            print(f'→ 이슈 #{it["number"]} 멘션 수정')
+            print(f'→ 이슈 #{it["number"]} 본문 수정')
             gh('issue', 'edit', str(it['number']), '--body-file', '-', input_text=new)
 
 
