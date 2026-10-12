@@ -176,9 +176,29 @@ def review_body(pdir, sols):
 '''
 
 
+# 예전에 잘못 적었던 GitHub 아이디 → 올바른 아이디 (이미 열린 이슈 본문도 고쳐준다)
+OLD_HANDLES = {'jaehee454': 'jaehee454-cloud'}
+
+
+def fix_old_mentions():
+    if DRY_RUN:
+        return
+    out = gh('issue', 'list', '--label', '코드리뷰', '--state', 'all', '--limit', '200',
+             '--json', 'number,body')
+    for it in json.loads(out or '[]'):
+        body = it['body'] or ''
+        new = body
+        for old, cur in OLD_HANDLES.items():
+            new = re.sub(r'@' + re.escape(old) + r'(?![\w-])', '@' + cur, new)
+        if new != body:
+            print(f'→ 이슈 #{it["number"]} 멘션 수정')
+            gh('issue', 'edit', str(it['number']), '--body-file', '-', input_text=new)
+
+
 def master_mode():
     titles = existing_issue_titles()
     ensure_labels()
+    fix_old_mentions()
     dirs = problem_dirs()
     complete = 0
     for pdir in dirs:

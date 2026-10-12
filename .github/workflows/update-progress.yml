@@ -1,0 +1,40 @@
+name: 진행 현황 자동 갱신
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-progress
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 진행 현황 표 갱신
+        run: python .github/scripts/update_progress.py
+
+      - name: 변경된 표 반영
+        run: |
+          if git diff --quiet -- README.md; then
+            echo "진행 현황에 반영할 변경이 없어요."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "chore: update submission progress"
+          git pull --rebase origin master
+          git push origin HEAD:master
