@@ -214,10 +214,36 @@ def master_mode():
         gh('issue', 'create', '--title', done_title, '--label', '완주', '--body-file', '-', input_text=body)
 
 
+AI_MARKER = '<!-- ai-review -->'
+
+
+def ai_targets():
+    """AI 리뷰가 아직 안 달린 열린 코드리뷰 이슈 → [{"issue": n, "dir": 문제폴더, "title": 제목}]"""
+    by_title = {'[코드리뷰] ' + problem_title(d).replace('[', '').replace(']', ''): d for d in problem_dirs()}
+    out = gh('issue', 'list', '--label', '코드리뷰', '--state', 'open', '--limit', '100',
+             '--json', 'number,title')
+    targets = []
+    for it in json.loads(out or '[]'):
+        pdir = by_title.get(it['title'])
+        if not pdir or len(solutions(pdir)) < len(MEMBERS):
+            continue
+        comments = gh('issue', 'view', str(it['number']), '--json', 'comments', '--jq', '.comments[].body')
+        if AI_MARKER in (comments or ''):
+            continue
+        targets.append({'issue': it['number'], 'dir': pdir, 'title': it['title']})
+    print(json.dumps(targets, ensure_ascii=False))
+    gh_out = os.environ.get('GITHUB_OUTPUT')
+    if gh_out:
+        with open(gh_out, 'a', encoding='utf-8') as f:
+            f.write('targets=' + json.dumps(targets, ensure_ascii=False) + '\n')
+
+
 if __name__ == '__main__':
     if len(sys.argv) >= 2 and sys.argv[1] == 'pr':
         pr_mode(sys.argv[2:])
     elif len(sys.argv) >= 2 and sys.argv[1] == 'master':
         master_mode()
+    elif len(sys.argv) >= 2 and sys.argv[1] == 'ai-targets':
+        ai_targets()
     else:
         print(__doc__)
