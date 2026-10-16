@@ -30,3 +30,4 @@ for tc in range(1, T + 1):
                 leaves += 1
 
     print(f'#{tc} {r + 1} {c + 1} {leaves}')
+    #
